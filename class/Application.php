@@ -71,6 +71,56 @@ class Application extends Config {
 
         $errors = [];                                  //Отсутствие ошибок
 
+        // Обязательные поля
+        $errors['name'] = 'Имя обязательно';
+        $errors['phone'] = 'Телефон обязательный';
+
+        foreach ($data as $field) {
+            // Пустое значение пропускаем
+            if (empty($field['value'])) {
+                continue;
+            }
+
+            // Валидация поля name
+            if ($field['name'] == 'name') {
+                unset($errors['name']);
+                if (preg_match('/[0-9]/', $field['value'])
+                    or strlen($field['value']) > 64) {
+
+                    $errors['name'] = 'Некорректное имя';
+                }
+            }
+
+            // Валидация поля phone
+            if ($field['name'] == 'phone') {
+                unset($errors['phone']);
+                $phone = str_replace([' ', '(', ')', '-', '+'], '', $field['value']);
+                if ( ! filter_var($phone, FILTER_VALIDATE_INT)
+                     or strlen($phone) < 10) {
+
+                    $errors['phone'] = 'Некорректный телефон';
+                }
+            }
+
+            // Валидация поля email
+            if ($field['name'] == 'email') {
+                if ( ! filter_var($field['value'], FILTER_VALIDATE_EMAIL)) {
+                    $errors['email'] = 'Некорректный E-mail';
+                }
+            }
+
+            // Валидация поля comment
+            if ($field['name'] == 'comment') {
+                if (strlen($field['value']) < 1024) {
+                    $errors['comment'] = 'Комментарий должен быть больше 1024 символа';
+                } else {
+                    if (strip_tags($field['value']) != $field['value']) {
+                        $errors['comment'] = 'Некорректный комментарий';
+                    }
+                }
+            }
+        }
+
         return ['result' => count($errors) === 0, 'error' => $errors];
     }
 
