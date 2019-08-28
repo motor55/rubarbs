@@ -80,46 +80,30 @@ class Application extends Config {
             if (empty($field['value'])) {
                 continue;
             }
-
-            // Валидация поля name
-            if ($field['name'] == 'name') {
-                unset($errors['name']);
-                if (preg_match('/[0-9]/', $field['value'])
-                    or strlen($field['value']) > 64) {
-
-                    $errors['name'] = 'Некорректное имя';
-                }
+            switch ($field['name']) {
+                case 'name': $error = $this->validateName($field['value']); unset($errors['name']); break;
+                case 'phone': $error = $this->validatePhone($field['value']); unset($errors['phone']); break;
+                case 'email': $error = $this->validateEmail($field['value']); break;
+                case 'comment': $error = $this->validateComment($field['value']); break;
             }
-
-            // Валидация поля phone
-            if ($field['name'] == 'phone') {
-                unset($errors['phone']);
-                $phone = str_replace([' ', '(', ')', '-', '+'], '', $field['value']);
-                if ( ! filter_var($phone, FILTER_VALIDATE_INT)
-                     or strlen($phone) < 10) {
-
-                    $errors['phone'] = 'Некорректный телефон';
-                }
-            }
-
-            // Валидация поля email
-            if ($field['name'] == 'email') {
-                if ( ! filter_var($field['value'], FILTER_VALIDATE_EMAIL)) {
-                    $errors['email'] = 'Некорректный E-mail';
-                }
-            }
-
-            // Валидация поля comment
-            if ($field['name'] == 'comment') {
-                if (strlen($field['value']) < 1024) {
-                    $errors['comment'] = 'Комментарий должен быть больше 1024 символа';
-                } else {
-                    if (strip_tags($field['value']) != $field['value']) {
-                        $errors['comment'] = 'Некорректный комментарий';
-                    }
-                }
+            if (!empty($error)) {
+                $errors[$field['name']] = $error;
             }
         }
+
+        // Проверка соотвествия формы
+        $formFields = ['name', 'phone', 'email', 'comment'];
+        foreach ($data as $key => $field) {
+            if(in_array($field['name'], $formFields)) {
+                $formFields = array_diff($formFields, [$field['name']]);
+            } else {
+                // Убераем лишние поля из $data
+                unset($data[$key]);
+            }
+        }
+        // Обработка недостающих полей
+        $missingFields = array_fill_keys($formFields, 'Непорядок, поле отсутствует в $data');
+        $errors = array_merge($errors, $missingFields);
 
         return ['result' => count($errors) === 0, 'error' => $errors];
     }
@@ -141,5 +125,58 @@ class Application extends Config {
             } else { $result = ['error' => 'Unspecified method!']; }
         } else { $result = ['error' => 'Empty request!']; }
         return $result;
+    }
+
+    /**
+     * Валидация имени
+     * @param $value
+     * @return string
+     */
+    private function validateName($value) {
+        $error = '';
+        if (preg_match('/[0-9]/', $value) || strlen($value) > 64) {
+            $error = 'Некорректное имя';
+        }
+        return $error;
+    }
+
+    /**
+     * Валидация телефона
+     * @param $value
+     * @return string
+     */
+    private function validatePhone($value) {
+        $error = '';
+        $value = str_replace([' ', '(', ')', '-', '+'], '', $value);
+        if (!filter_var($value, FILTER_VALIDATE_INT) || strlen($value) < 10) {
+            $error = 'Некорректный телефон';
+        }
+        return $error;
+    }
+
+    /**
+     * Валидация e-mail
+     * @param $value
+     * @return string
+     */
+    private function validateEmail($value) {
+        return filter_var($value, FILTER_VALIDATE_EMAIL) ? '' : 'Некорректный E-mail';
+    }
+
+    /**
+     * Валидация комментария
+     * @param $value
+     * @return string
+     */
+    private function validateComment($value) {
+        $error = '';
+        if (strlen($value) < 1024) {
+            $error = 'Комментарий должен быть больше 1024 символа';
+        } else {
+            if (strip_tags($value) != $value) {
+                $error = 'Некорректный комментарий';
+            }
+        }
+        return $error;
     }
 }
